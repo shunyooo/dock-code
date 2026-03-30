@@ -1,45 +1,45 @@
-# dock-code Design Document
+# dock-code 設計ドキュメント
 
-## Overview
+## 概要
 
-dock-code is a VS Code fork optimized for multi-devcontainer workflows and coding agent collaboration.
+dock-code は、マルチ devcontainer ワークフローと Coding Agent との協業に最適化した VS Code fork。
 
-The core idea: **one window, multiple projects (devcontainers), each with its own workspace state**.
+コアアイデア: **1ウィンドウで複数のプロジェクト（devcontainer）を扱い、それぞれが独立したワークスペース状態を持つ**。
 
-## Motivation
+## 背景
 
-Current IDEs force a 1:1 mapping between windows and remote connections. When working with multiple devcontainers simultaneously (common in microservice architectures or multi-repo workflows), this means juggling multiple windows with no unified view.
+現在の IDE は、ウィンドウとリモート接続が 1:1 で紐づいている。複数の devcontainer を同時に扱う場合（マイクロサービスやマルチリポ構成ではよくある）、ウィンドウが乱立し、統一的な俯瞰ができない。
 
-Meanwhile, coding agents like Claude Code are becoming central to the development workflow, but IDEs treat them as an afterthought — a terminal tab at best.
+一方、Claude Code のような Coding Agent は開発フローの中心になりつつあるが、IDE 上での扱いはターミナルタブ程度に留まっている。
 
-dock-code aims to be the IDE where:
-- Multiple devcontainers coexist in a single window
-- Coding agents are first-class citizens with dedicated UI
-- Switching between projects is as fast as switching tmux windows
+dock-code が目指すもの:
+- 複数の devcontainer を1ウィンドウ内で共存させる
+- Coding Agent を第一級市民として扱う専用 UI
+- プロジェクト切り替えが tmux のウィンドウ切り替え並みに速い
 
-## Core Concepts
+## コアコンセプト
 
 ### Project
 
-A **Project** is a single work context. It consists of:
+**Project** = 1つの作業コンテキスト。以下を持つ:
 
-- A connection to a devcontainer (multiple Projects can share the same container)
-- An independent pane layout
-- Independent agent sessions (e.g., Claude Code conversations)
-- Independent file/editor state
+- devcontainer への接続（複数の Project が同じコンテナを共有可能）
+- 独立したペインレイアウト
+- 独立した Agent セッション（例: Claude Code の会話）
+- 独立したファイル/エディタの状態
 
-Projects are displayed in a flat list in the left sidebar. No nesting.
+Project は左サイドバーにフラットなリストとして表示。階層なし。
 
 ```
 ┌───────────────┬────────────────────────────┐
 │ Projects      │                            │
-│               │  Selected Project's        │
-│ ● flamel/     │  Pane Layout               │
-│   rewriting   │                            │
+│               │  選択中 Project の           │
+│ ● flamel/     │  ペインレイアウト             │
+│   コピー言換え │                            │
 │ ○ flamel/     │  ┌──────────┬─────────┐   │
-│   bugfix-123  │  │ Claude   │ editor  │   │
+│   バグ修正#123│  │ Claude   │ editor  │   │
 │ ○ report/     │  │ Code     │         │   │
-│   weekly      │  │ terminal │         │   │
+│   週報        │  │ terminal │         │   │
 │               │  ├──────────┴─────────┤   │
 │ Status:       │  │ terminal / preview │   │
 │ 1 running     │  └────────────────────┘   │
@@ -49,113 +49,113 @@ Projects are displayed in a flat list in the left sidebar. No nesting.
 
 ### Pane
 
-A **Pane** is a subdivision within a Project. Panes can contain:
+**Pane** = Project 内の分割領域。以下を配置可能:
 
-- Terminal (including Claude Code or other agents)
-- Code editor
-- Markdown preview
-- Webview (HTML preview, graphs, etc.)
+- ターミナル（Claude Code 等の Agent を含む）
+- コードエディタ
+- Markdown プレビュー
+- Webview（HTML プレビュー、グラフ等）
 
-Panes are freely arrangeable. Keyboard shortcuts for pane navigation follow tmux conventions.
+Pane は自由に配置可能。ペイン操作のキーボードショートカットは tmux 風。
 
-## Use Cases
+## ユースケース
 
-### UC1: Multi-project overview
-A developer has 3 devcontainers running (flamel, report, polaris). From the sidebar, they can see all projects and each project's agent status (running/idle/error) at a glance. Clicking a project switches the entire workspace to that project's layout.
+### UC1: マルチプロジェクトの俯瞰
+3つの devcontainer（flamel, report, polaris）が稼働中。サイドバーから全プロジェクトと各 Agent のステータス（running/idle/error）を一覧で確認できる。プロジェクトをクリックすると、そのプロジェクトのレイアウトに切り替わる。
 
-### UC2: Parallel tasks in the same container
-A developer is working on two separate tasks in the same codebase (feature development + bug fix). They create two Projects pointing to the same devcontainer, each with its own Claude Code session, open files, and pane layout.
+### UC2: 同一コンテナでの並行タスク
+同じコードベースで2つのタスク（機能開発 + バグ修正）を並行作業。同じ devcontainer を指す2つの Project を作成し、それぞれ独立した Claude Code セッション、開いているファイル、ペインレイアウトを持つ。
 
-### UC3: Agent-assisted development
-Claude Code edits files in the background. The editor automatically opens and displays the changed files. The developer reviews changes in real-time without manually opening files.
+### UC3: Agent 連携開発
+Claude Code がバックグラウンドでファイルを編集。エディタが変更されたファイルを自動的に開いて表示。手動でファイルを開く手間なく、リアルタイムで変更をレビューできる。
 
-### UC4: Rich content display
-Agent outputs (Markdown reports, HTML graphs, data visualizations) are displayed in Webview panes alongside the code editor, providing a richer experience than terminal-only output.
+### UC4: リッチコンテンツ表示
+Agent の出力（Markdown レポート、HTML グラフ、データ可視化）を Webview ペインでコードエディタと並べて表示。ターミナルのみの出力よりリッチな体験。
 
-### UC5: Keyboard-driven workflow
-Developers switch between projects and panes entirely via keyboard shortcuts, similar to tmux window/pane navigation. No mouse required for core workflows.
+### UC5: キーボード駆動ワークフロー
+プロジェクト切り替え、ペイン移動をすべてキーボードショートカットで操作。tmux のウィンドウ/ペイン操作に近い体験。マウス不要。
 
-## Architecture: What to Change in VS Code
+## アーキテクチャ: VS Code の変更箇所
 
-### Core Changes (fork-only)
+### コア変更（fork でのみ可能）
 
-| Area | Current VS Code | dock-code Target |
-|------|----------------|-----------------|
-| Remote connection | 1 window = 1 connection | 1 window = N connections (per Project) |
-| Workspace state | Single workspace per window | Per-Project workspace state (editors, terminals, layout) |
-| Sidebar | Explorer, Search, Git, etc. | Add Project list as primary navigation |
+| 領域 | 現在の VS Code | dock-code の目標 |
+|------|---------------|-----------------|
+| リモート接続 | 1ウィンドウ = 1接続 | 1ウィンドウ = N接続（Project ごと） |
+| ワークスペース状態 | ウィンドウに1つ | Project ごとに独立（エディタ、ターミナル、レイアウト） |
+| サイドバー | Explorer, Search, Git 等 | Project リストをプライマリナビゲーションとして追加 |
 
-The critical change is **multi-remote connection support**. VS Code's `RemoteAuthority` is currently window-scoped. dock-code needs to make it Project-scoped.
+最も重要な変更は **マルチリモート接続のサポート**。VS Code の `RemoteAuthority` は現在ウィンドウスコープ。dock-code ではこれを Project スコープにする必要がある。
 
-### Extension-level Changes (no core modification needed)
+### 拡張機能で対応可能（コア変更不要）
 
-| Feature | Implementation |
-|---------|---------------|
-| Agent status display | Read status files/API, show in sidebar |
-| Auto-open agent-edited files | File watcher + editor auto-open |
-| tmux-style keybindings | Keybinding configuration |
-| Rich reporting | Webview panel extension |
+| 機能 | 実装方法 |
+|------|---------|
+| Agent ステータス表示 | ステータスファイル/API を読み取りサイドバーに表示 |
+| Agent 編集ファイルの自動表示 | File watcher + エディタ自動オープン |
+| tmux 風キーバインド | keybindings 設定 |
+| リッチなレポーティング | Webview パネル拡張 |
 
-### Unchanged
+### 変更不要
 
-- Text editor (Monaco)
-- LSP integration (per-container, already works)
-- Markdown preview
+- テキストエディタ（Monaco）
+- LSP 連携（コンテナごと、既に動作）
+- Markdown プレビュー
 - Webview API
-- Extension ecosystem
-- Terminal emulator
+- 拡張機能エコシステム
+- ターミナルエミュレータ
 
-## Development Roadmap
+## 開発ロードマップ
 
-### Phase 0: Foundation (current)
-- [x] Fork VS Code
-- [x] Build successfully on Linux
-- [ ] Build and run on macOS
-- [ ] Minimal branding change (title: "dock-code")
-- [ ] Verify upstream merge workflow with agent
+### Phase 0: 基盤（現在）
+- [x] VS Code を fork
+- [x] Linux でビルド成功
+- [ ] macOS でビルド・動作確認
+- [ ] 最小限のブランディング変更（タイトル: "dock-code"）
+- [ ] Agent による upstream マージワークフローの検証
 
-### Phase 1: Project Sidebar
-- [ ] Implement Project list sidebar
-- [ ] Project CRUD (create, rename, delete)
-- [ ] Project switching (save/restore pane layout)
-- [ ] Per-Project terminal sessions
+### Phase 1: Project サイドバー
+- [ ] Project リストサイドバーの実装
+- [ ] Project の CRUD（作成、リネーム、削除）
+- [ ] Project 切り替え（ペインレイアウトの保存/復元）
+- [ ] Project ごとのターミナルセッション
 
-### Phase 2: Multi-Devcontainer
-- [ ] Refactor RemoteAuthority to be Project-scoped
-- [ ] Per-Project LSP connections
-- [ ] Per-Project file explorer scope
-- [ ] devcontainer auto-detection
+### Phase 2: マルチ Devcontainer
+- [ ] RemoteAuthority を Project スコープにリファクタ
+- [ ] Project ごとの LSP 接続
+- [ ] Project ごとのファイルエクスプローラースコープ
+- [ ] devcontainer の自動検出
 
-### Phase 3: Agent Integration
-- [ ] Agent status display in Project list
-- [ ] Auto-open files edited by agent
-- [ ] Agent output Webview panel
-- [ ] tmux-style pane keybindings
+### Phase 3: Agent 連携
+- [ ] Project リストに Agent ステータス表示
+- [ ] Agent が編集したファイルの自動表示
+- [ ] Agent 出力用 Webview パネル
+- [ ] tmux 風ペインキーバインド
 
-### Phase 4: Polish
-- [ ] Rich reporting (graphs, structured output)
-- [ ] Mobile-friendly remote access
-- [ ] Project templates
-- [ ] Session persistence across restarts
+### Phase 4: 仕上げ
+- [ ] リッチなレポーティング（グラフ、構造化出力）
+- [ ] モバイル対応のリモートアクセス
+- [ ] Project テンプレート
+- [ ] 再起動時のセッション永続化
 
-## Upstream Merge Strategy
+## Upstream マージ戦略
 
-dock-code tracks the `microsoft/vscode` upstream. Monthly merges are performed (assisted by coding agents) to stay up-to-date with VS Code releases.
+dock-code は `microsoft/vscode` の upstream を追跡する。月次で Coding Agent の支援を受けてマージを実施。
 
-Principles:
-- **Minimize core changes**: Keep fork diff as small as possible
-- **Prefer extensions**: Implement features as extensions when VS Code API allows
-- **Isolate changes**: Keep dock-code specific code in clearly separated modules
-- **Agent-assisted merges**: Use Claude Code to resolve merge conflicts during upstream syncs
+方針:
+- **コア変更を最小限に**: fork の diff をできるだけ小さく保つ
+- **拡張機能を優先**: VS Code API で実現できる機能は拡張として実装
+- **変更を分離**: dock-code 固有のコードは明確に分離されたモジュールに配置
+- **Agent によるマージ**: upstream 同期時のコンフリクト解消に Claude Code を活用
 
-## Tech Stack
+## 技術スタック
 
-- **Base**: VS Code (Electron + TypeScript)
-- **Build**: Node.js 22, npm, gulp
-- **Target platforms**: macOS (primary), Linux
-- **Required**: fnm/nvm for Node version management
+- **ベース**: VS Code (Electron + TypeScript)
+- **ビルド**: Node.js 22, npm, gulp
+- **ターゲット**: macOS（メイン）, Linux
+- **必須**: fnm/nvm（Node バージョン管理）
 
-## Getting Started
+## 開発の始め方
 
 ```bash
 # Clone
@@ -165,18 +165,18 @@ cd dock-code
 # Node 22
 fnm install 22.22.1 && fnm use 22.22.1
 
-# Build dependencies (Linux)
+# ビルド依存（Linux）
 sudo apt-get install -y make g++ pkg-config libx11-dev libxkbfile-dev libsecret-1-dev libkrb5-dev
 
-# Install & compile
+# インストール & コンパイル
 npm install
 npm run compile
 
-# Run (macOS / Linux with display)
+# 起動（macOS / ディスプレイのある Linux）
 ./scripts/code.sh
 
-# Watch mode (for development)
+# Watch モード（開発用）
 npm run watch
-# Then in another terminal:
+# 別ターミナルで:
 ./scripts/code.sh
 ```
