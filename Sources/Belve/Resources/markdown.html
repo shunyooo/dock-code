@@ -27,9 +27,13 @@ html, body {
 .milkdown .ProseMirror h3 { font-size: 1.15em !important; font-weight: 600 !important; }
 .milkdown .ProseMirror p { font-size: 14px !important; line-height: 1.6 !important; }
 
-/* Force dark theme */
+
+</style>
+<style>/* MARKDOWN_CSS */</style>
+<style>
+/* Force dark theme — AFTER Milkdown CSS to override */
 .milkdown, .milkdown .ProseMirror {
-	background: #1a1a1f !important;
+	background: #24242e !important;
 	color: #e0e3eb !important;
 	caret-color: #e0e3eb !important;
 }
@@ -43,10 +47,20 @@ html, body {
 .milkdown .ProseMirror code {
 	background: #2a2a35 !important;
 	color: #f38ba8 !important;
+	border-radius: 4px !important;
+	padding: 2px 5px !important;
 }
-.milkdown .ProseMirror pre {
+.milkdown .ProseMirror pre,
+.milkdown .ProseMirror pre code,
+.milkdown .ProseMirror [class*="code-block"],
+.milkdown .ProseMirror .code-fence,
+.milkdown .ProseMirror div[data-type="codeBlock"],
+.milkdown [data-milkdown-type="code-block"] {
 	background: #1e1e2e !important;
 	color: #cdd6f4 !important;
+}
+.milkdown .ProseMirror pre code {
+	padding: 0 !important;
 }
 .milkdown .ProseMirror blockquote {
 	border-left-color: #585b70 !important;
@@ -72,8 +86,11 @@ html, body {
 .milkdown .ProseMirror ol li::marker {
 	color: #585b70 !important;
 }
+/* Catch-all: force all child elements dark */
+.milkdown .ProseMirror * {
+	border-color: #45475a !important;
+}
 </style>
-<style>/* MARKDOWN_CSS */</style>
 </head>
 <body>
 <div id="editor"></div>
