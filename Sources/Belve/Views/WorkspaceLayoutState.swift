@@ -13,6 +13,9 @@ final class ProjectLayoutState: ObservableObject, Codable {
 	@Published var fileTreeWidth: CGFloat = 200 {
 		didSet { onChanged?() }
 	}
+	@Published var openFilePath: String? = nil {
+		didSet { onChanged?() }
+	}
 
 	var onChanged: (() -> Void)?
 
@@ -24,7 +27,7 @@ final class ProjectLayoutState: ObservableObject, Codable {
 	}
 
 	enum CodingKeys: String, CodingKey {
-		case commandAreaFraction, showEditor, showFileTree, fileTreeWidth
+		case commandAreaFraction, showEditor, showFileTree, fileTreeWidth, openFilePath
 	}
 
 	required init(from decoder: Decoder) throws {
@@ -33,6 +36,7 @@ final class ProjectLayoutState: ObservableObject, Codable {
 		showEditor = try container.decodeIfPresent(Bool.self, forKey: .showEditor) ?? true
 		showFileTree = try container.decodeIfPresent(Bool.self, forKey: .showFileTree) ?? true
 		fileTreeWidth = try container.decodeIfPresent(CGFloat.self, forKey: .fileTreeWidth) ?? 200
+		openFilePath = try container.decodeIfPresent(String.self, forKey: .openFilePath)
 	}
 
 	func encode(to encoder: Encoder) throws {
@@ -41,6 +45,7 @@ final class ProjectLayoutState: ObservableObject, Codable {
 		try container.encode(showEditor, forKey: .showEditor)
 		try container.encode(showFileTree, forKey: .showFileTree)
 		try container.encode(fileTreeWidth, forKey: .fileTreeWidth)
+		try container.encodeIfPresent(openFilePath, forKey: .openFilePath)
 	}
 }
 
