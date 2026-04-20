@@ -287,57 +287,87 @@ function ensurePathLinkProvider() {
 				return;
 			}
 
-			// Collect wrapped lines into a single string for multi-line path detection
-			let fullText = line.translateToString(true);
-			let wrappedLines = 1;
-			for (let ny = y; ny < buf.length; ny++) {
-				const nextLine = buf.getLine(ny);
-				if (!nextLine || !nextLine.isWrapped) break;
-				fullText += nextLine.translateToString(true);
-				wrappedLines++;
-			}
-
+			const text = line.translateToString(true);
 			const links = [];
+
+			// --- 1) Direct matches on this line ---
 			terminalPathRegex.lastIndex = 0;
 			let match;
-
-			while ((match = terminalPathRegex.exec(fullText)) !== null) {
-				const rawPath = match[1];
+			while ((match = terminalPathRegex.exec(text)) !== null) {
+				let rawPath = match[1];
 				if (!rawPath) continue;
-				const startIndex = match.index + match[0].lastIndexOf(rawPath);
-				const endIndex = startIndex + rawPath.length;
+				let startIndex = match.index + match[0].lastIndexOf(rawPath);
 
-				// Map string offsets to cell positions across wrapped lines
-				const cols = term.cols;
-				const startRow = y + Math.floor(startIndex / cols);
-				const startCol = (startIndex % cols) + 1;
-				const endRow = y + Math.floor((endIndex - 1) / cols);
-				const endCol = ((endIndex - 1) % cols) + 1;
+				// Check if path continues on the next line(s) via hard wrap
+				// (path ends near EOL and next line starts with indentation + path chars)
+				let fullPath = rawPath;
+				let endRow = y;
+				let endCol = mapStringIndexToCell(line, startIndex + rawPath.length);
+				const trimmedEnd = text.substring(startIndex + rawPath.length).trim();
+				if (trimmedEnd.length === 0) {
+					// Path is at end of line — check continuation
+					for (let ny = y; ny < Math.min(y + 5, buf.length); ny++) {
+						const nextLine = buf.getLine(ny);
+						if (!nextLine) break;
+						const nextText = nextLine.translateToString(true);
+						// Continuation: starts with whitespace then path chars (no space in between)
+						const contMatch = nextText.match(/^(\s+)([^\s"'`)\]]+)/);
+						if (!contMatch) break;
+						fullPath += contMatch[2];
+						endRow = ny + 1;
+						endCol = mapStringIndexToCell(nextLine, contMatch[0].length);
+						// If this continuation also goes to EOL, keep going
+						const rest = nextText.substring(contMatch[0].length).trim();
+						if (rest.length > 0) break;
+					}
+				}
 
-				// Only create link if any part is on the requested line y
-				if (startRow > y + wrappedLines - 1) continue;
+				// Validate: must contain at least one /
+				if (!fullPath.includes('/')) continue;
 
+				const startCell = mapStringIndexToCell(line, startIndex);
 				const link = {
 					range: {
-						start: { x: startCol, y: startRow },
-						end: { x: endCol, y: endRow }
+						start: { x: startCell + 1, y: y },
+						end: { x: Math.max(startCell + 1, endCol), y: endRow }
 					},
-					text: rawPath,
-					decorations: {
-						underline: true,
-						pointerCursor: true
-					},
-					hover: () => {
-						hoveredPathLink = link;
-					},
-					leave: () => {
-						hoveredPathLink = null;
-					},
-					activate: () => {
-						postMessage({ type: 'openPath', path: rawPath });
-					}
+					text: fullPath,
+					decorations: { underline: true, pointerCursor: true },
+					hover: () => { hoveredPathLink = link; },
+					leave: () => { hoveredPathLink = null; },
+					activate: () => { postMessage({ type: 'openPath', path: fullPath }); }
 				};
 				links.push(link);
+			}
+
+			// --- 2) This line might be a continuation of a path from the previous line ---
+			if (links.length === 0 && y > 1) {
+				const prevLine = buf.getLine(y - 2);
+				if (prevLine) {
+					const prevText = prevLine.translateToString(true);
+					// Check if previous line ends with a partial path (no trailing space)
+					const prevPathMatch = prevText.match(/([^\s"'`)\]]*\/[^\s"'`)\]]+)\s*$/);
+					const thisContMatch = text.match(/^(\s+)([^\s"'`)\]]+)/);
+					if (prevPathMatch && thisContMatch && prevText.trimEnd().endsWith(prevPathMatch[1])) {
+						const fullPath = prevPathMatch[1] + thisContMatch[2];
+						const contStart = thisContMatch[1].length;
+						const contEnd = thisContMatch[0].length;
+						const startCell = mapStringIndexToCell(line, contStart);
+						const endCell = mapStringIndexToCell(line, contEnd);
+						const link = {
+							range: {
+								start: { x: startCell + 1, y: y },
+								end: { x: endCell, y: y }
+							},
+							text: fullPath,
+							decorations: { underline: true, pointerCursor: true },
+							hover: () => { hoveredPathLink = link; },
+							leave: () => { hoveredPathLink = null; },
+							activate: () => { postMessage({ type: 'openPath', path: fullPath }); }
+						};
+						links.push(link);
+					}
+				}
 			}
 
 			callback(links);
