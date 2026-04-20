@@ -280,29 +280,47 @@ function ensurePathLinkProvider() {
 	if (pathLinkProviderDisposable) return;
 	pathLinkProviderDisposable = term.registerLinkProvider({
 		provideLinks(y, callback) {
-			const line = term.buffer.active.getLine(y - 1);
+			const buf = term.buffer.active;
+			const line = buf.getLine(y - 1);
 			if (!line) {
 				callback([]);
 				return;
 			}
 
-			const text = line.translateToString(true);
+			// Collect wrapped lines into a single string for multi-line path detection
+			let fullText = line.translateToString(true);
+			let wrappedLines = 1;
+			for (let ny = y; ny < buf.length; ny++) {
+				const nextLine = buf.getLine(ny);
+				if (!nextLine || !nextLine.isWrapped) break;
+				fullText += nextLine.translateToString(true);
+				wrappedLines++;
+			}
+
 			const links = [];
 			terminalPathRegex.lastIndex = 0;
 			let match;
 
-			while ((match = terminalPathRegex.exec(text)) !== null) {
+			while ((match = terminalPathRegex.exec(fullText)) !== null) {
 				const rawPath = match[1];
 				if (!rawPath) continue;
 				const startIndex = match.index + match[0].lastIndexOf(rawPath);
 				const endIndex = startIndex + rawPath.length;
-				const startCell = mapStringIndexToCell(line, startIndex);
-				const endCell = mapStringIndexToCell(line, endIndex);
+
+				// Map string offsets to cell positions across wrapped lines
+				const cols = term.cols;
+				const startRow = y + Math.floor(startIndex / cols);
+				const startCol = (startIndex % cols) + 1;
+				const endRow = y + Math.floor((endIndex - 1) / cols);
+				const endCol = ((endIndex - 1) % cols) + 1;
+
+				// Only create link if any part is on the requested line y
+				if (startRow > y + wrappedLines - 1) continue;
 
 				const link = {
 					range: {
-						start: { x: startCell + 1, y },
-						end: { x: Math.max(startCell + 1, endCell), y }
+						start: { x: startCol, y: startRow },
+						end: { x: endCol, y: endRow }
 					},
 					text: rawPath,
 					decorations: {
