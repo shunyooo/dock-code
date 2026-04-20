@@ -349,10 +349,10 @@ function ensurePathLinkProvider() {
 				const prevLine = buf.getLine(y - 2);
 				if (prevLine) {
 					const prevText = prevLine.translateToString(true);
-					// Check if previous line ends with a partial path (no trailing space)
+					// Check if previous line ends with a partial path (not ending with / which means dir is complete)
 					const prevPathMatch = prevText.match(/([^\s"'`)\]]*\/[^\s"'`)\]]+)\s*$/);
-					const thisContMatch = text.match(/^(\s+)([^\s"'`)\]]+)/);
-					if (prevPathMatch && thisContMatch && prevText.trimEnd().endsWith(prevPathMatch[1])) {
+					const thisContMatch = text.match(/^(\s+)([A-Za-z0-9_.\-][^\s"'`)\]]*)/);
+					if (prevPathMatch && thisContMatch && !prevPathMatch[1].endsWith('/') && prevText.trimEnd().endsWith(prevPathMatch[1])) {
 						const fullPath = prevPathMatch[1] + thisContMatch[2];
 						const contStart = thisContMatch[1].length;
 						const contEnd = thisContMatch[0].length;
