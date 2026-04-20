@@ -311,9 +311,13 @@ function ensurePathLinkProvider() {
 						if (!nextLine) break;
 						const nextText = nextLine.translateToString(true);
 						// Continuation: starts with whitespace then path chars (no space in between)
-						const contMatch = nextText.match(/^(\s+)([^\s"'`)\]]+)/);
+						// Stop if continuation looks like a list item (- or * or digit.)
+					const contMatch = nextText.match(/^(\s+)([^\s"'`)\]]+)/);
 						if (!contMatch) break;
-						fullPath += contMatch[2];
+					if (/^[-*•]\s/.test(contMatch[2]) || /^\d+\.\s/.test(contMatch[2])) break;
+					// Stop if current path already ends with / and continuation doesn't look like path segment
+					if (fullPath.endsWith('/') && !/^[A-Za-z0-9_.\-]/.test(contMatch[2])) break;
+					fullPath += contMatch[2];
 						endRow = ny + 1;
 						endCol = mapStringIndexToCell(nextLine, contMatch[0].length);
 						// If this continuation also goes to EOL, keep going
